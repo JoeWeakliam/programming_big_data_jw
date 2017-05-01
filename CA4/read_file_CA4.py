@@ -1,12 +1,9 @@
 """
-Program to read in the changes log file
+Program to read in and process the changes log file into a list of 'commit' objects 
 """
-
+#import packages to allow creation of and export to CSV file
 import xlwt
 from tempfile import TemporaryFile
-
-changes_file = 'changes_python.log'
-data = [line.strip() for line in open(changes_file, 'r')]
 
 #create a class of commit objects
 class Commit(object):
@@ -44,37 +41,15 @@ class Commit(object):
     def getChanges(self):
         return self.changes
 
-#class Author extends Commit
-'''class Author(Commit):
+#class Change extends Commit and inherits all the class methods 
+class Change(Commit):
     
-    def __init__(self, num_authors = None, max_author = None, min_author = None, num_commits = None):
-        self.num_authors = num_authors
-        self.max_author = max_author
-        self.min_author = min_author
-        self.num_commits = num_commits
-    
-    def setNumAuthors(self, number):
-        self.num_authors = number
-    
-    def getNumAuthors(self):
-        return self.num_authors
-    
-    def setMaxAuthor(self, name):
-        self.max_author = name
-    
-    def getMaxAuthor(self):
-        return self.max_author
-    
-    def setMinAuthor(self, name):
-        self.min_author = name
-    
-    def getMinAuthor(self):
-        return self.min_author
-    
-    def getNumCommits(self):
-        return self.num_commits'''
-
-#process list of authors to count number of commit comments by author
+    #none values allow you  to create change objects with no parameters 
+    def __init__(self, author = None, num_changes = None):
+        self.author = author
+        self.num_changes = num_changes
+            
+#method to process list of authors to count number of commit comments by author
 def processAuthors(authors):
     #create a list of unique authors
     unique_authors = []
@@ -87,7 +62,6 @@ def processAuthors(authors):
     for author in authors:
         if author not in unique_authors:
             unique_authors.append(author) #add to list of unique authors
-    #unique_authors.sort()
     #count number of occurrences of each unique author
     for unique_author in unique_authors:
         #print unique_author, authors.count(unique_author)
@@ -103,8 +77,10 @@ def processAuthors(authors):
             #print min_author, authors.count(unique_author)
     print 'Max {} commits made by {}'.format(max_commits, max_author)
     print 'Min {} commits made by {}'.format(min_commits, min_author)
+    #want to return multiple values 
+    return max_author, max_commits, min_author, min_commits
             
-#process list of dates to count number of commit comments made on each distinct date
+#method to process list of dates to count number of commit comments made on each date
 def processDates(dates):
     #create a list of unique dates
     unique_dates = []
@@ -129,6 +105,7 @@ def processDates(dates):
             min_date = unique_date
     print 'Max {} commits made on {}'.format(max_commits, max_date)
     print 'Min {} commits made on {}'.format(min_commits, min_date)
+    return max_date, max_commits, min_date, min_commits
 
 #process list of days to count number of commit comments made on each day of the week
 def processDays(days):
@@ -155,96 +132,112 @@ def processDays(days):
             min_day = unique_day
     print 'Max {} commits made on {}'.format(max_commits, max_day)
     print 'Min {} commits made on {}'.format(min_commits, min_day)
+    return max_day, max_commits, min_day, min_commits
 
-#process list of changes/authors to record number of commits involving more than 10 files being updated
-def processChanges(changes, authors):
+#process list of changes/authors to record details about commits involving more than 20 files being updated
+def processChanges(commits):
     index = 0
-    num_files_updated = 10
-    large_commits = {}
-    #largest_commit = None
-    #commit_author = None
-    for change in changes:
-        if len(change) > num_files_updated:
-            large_commits = {'change' : 'hello'}
-            #print change, authors[index]
-            index += 1
-    #print large_commits.
+    num_files_updated = 30 #set min number of changed files that we are interested in 
+    large_commits = [] #create a list of change objects where num_files_updated > 20
+    while index < len(commits):
+        if len(commits[index].getChanges()) > num_files_updated:
+            change = Change() #create a new change object and set its attributes
+            change.setAuthor = commits[index].getAuthor()
+            change.setChanges = commits[index].getChanges()
+            large_commits.append(change) #add to list of large commits
+        index += 1 #increment value of index outside of 'if' clause
+    print 'Number of large commits: {}'.format(len(large_commits))
+    return large_commits
 
-#write to excel file to generate plots using R         
-def writeExcel(commits):
-    book = xlwt.Workbook()
+#write to CSV file to generate plots using R         
+def writeCSV(commits):
+    book = xlwt.Workbook() #create the workbook and active sheet
     sheet1 = book.add_sheet('Commits')
-
-    #supersecretdata = [34,123,4,1234,12,34,12,41,234,123,4,123,1,45123,5,43,61,3,56]
-    #for i, e in enumerate(supersecretdata):
-        #sheet1.write(i,1,e)
-        
+    index = 0
+    #set the column names
+    sheet1.write(index, 0, 'Author')
+    sheet1.write(index, 1, 'Date')
+    sheet1.write(index, 2, 'Day')
+    sheet1.write(index, 3, 'Changes length')
+    #populate the rows with attribute values from commit objects
     for index, commit in enumerate(commits):
-        sheet1.write(index, 1, str(commit.getAuthor()))
-        
+        sheet1.write(index + 1, 0, str(commit.getAuthor()))
+        sheet1.write(index + 1, 1, str(commit.getDate()))
+        sheet1.write(index + 1, 2, str(commit.getDay()))
+        sheet1.write(index + 1, 3, len(commit.getChanges())) #causes exception: String longer than 32767 characters
+    #name and save the file
     name = "Commits.csv"
     book.save(name)
-    book.save(TemporaryFile())     
+    book.save(TemporaryFile())
+    return book
 
-       
-commits = [] #store commit objects in a list
-sep = 72*'-' #separator of 72 hyphens
-current_commit = None
-index = 0 
+#read in and process the relevant log file detailing commit activity
+def process_file(file_name):
+    changes_file = file_name
+    data = [line.strip() for line in open(changes_file, 'r')]
+    #initialise key variables for processing log file       
+    commits = [] #store commit objects in a list
+    sep = 72*'-' #separator of 72 hyphens
+    current_commit = None
+    index = 0 
 
-#search for separator, read line for revision, author, date, comment line count
-#read file changes, read comment
-#get next commit
-while True:
-    try:
-        #parse each of the commits and put them into a list of commit objects
-        current_commit = Commit()
-        details = data[index + 1].split('|')
-        #call setAuthor() method
-        current_commit.setAuthor(details[1].strip())
-        #call setDate() method - Note we are only interested in the yyyy-mm-dd substring here
-        current_commit.setDate(details[2].strip().split(' ')[0])
-        #call setDay() method - Note we need to access the relevant substring to get the specific day
-        current_commit.setDay(details[2].strip().split(' ')[3][1:4])
-        #delete this as not relevant to my analysis
-        current_commit.comment_line_count = int(details[3].strip().split(' ')[0])
-        #call setChanges() method - Note data[0:5] returns data from line 0 up to line 4
-        current_commit.setChanges(data[index+2:data.index('',index+1)]) 
-        index = data.index(sep, index + 1) #index function searches ahead to find next separator and assigns new value to index variable
-        commits.append(current_commit) #add current commit object to list of commits
-    except IndexError:
-        break
+    #search for separator, read line for revision, author, date, comment line count
+    #read file changes, read comment
+    #get next commit
+    while True:
+        try:
+            #parse each of the commits and put them into a list of commit objects
+            current_commit = Commit()
+            details = data[index + 1].split('|')
+            #call setAuthor() method
+            current_commit.setAuthor(details[1].strip())
+            #call setDate() method - Note we are only interested in the yyyy-mm-dd substring here
+            current_commit.setDate(details[2].strip().split(' ')[0])
+            #call setDay() method - Note we need to access the relevant substring to get the specific day
+            current_commit.setDay(details[2].strip().split(' ')[3][1:4])
+            #delete this as not relevant to my analysis
+            current_commit.comment_line_count = int(details[3].strip().split(' ')[0])
+            #call setChanges() method - Note data[0:5] returns data from line 0 up to line 4
+            current_commit.setChanges(data[index+2:data.index('',index+1)]) 
+            index = data.index(sep, index + 1) #index function searches ahead to find next separator and assigns new value to index variable
+            commits.append(current_commit) #add current commit object to list of commits
+        except IndexError:
+            break
 
-#print len(commits)
-print commits[0].getAuthor()
-print commits[0].getDate()
-print commits[0].getDay()
-print commits[0].getChanges()
+    commits.reverse() #sort the commit objects in chronological order 
+    return commits
 
-#reorder the list in chronological order
-commits.reverse()
-
-#create a list of authors, dates, days and changes to allow statistical analysis to be run on each attribute
-authors = []
-dates = []
-days = []
-changes = []
-
-#process list of commit objects and add key attributes to new lists
-for index, commit in enumerate(commits):
-    #first access commit author
-    #print(commit.getAuthor())
-    authors.append(commit.getAuthor())
-    dates.append(commit.getDate())
-    days.append(commit.getDay())
-    changes.append(commit.getChanges())
-#call relevant methods to process attribute lists
-processAuthors(authors)
-processDates(dates)
-processDays(days)
-processChanges(changes, authors)
-writeExcel(commits)
-
+#populate the lists of attribute objects that we want to analyse for interesting statistics 
+def populate_lists(commits):
+    #create a list of authors, dates, days and changes to allow statistical analysis to be run on each attribute
+    authors = []
+    dates = []
+    days = []
+    #changes = []    
+    #process list of commit objects and add key attributes to new lists
+    for index, commit in enumerate(interesting_commits):
+        #add attributes of each commit object to corresponding list 
+        authors.append(commit.getAuthor())
+        dates.append(commit.getDate())
+        days.append(commit.getDay())
+        #changes.append(commit.getChanges())
+    
+    #call relevant methods to process attribute lists and create CSV file
+    author_stats = processAuthors(authors)
+    print author_stats
+    date_stats = processDates(dates)
+    print date_stats
+    day_stats = processDays(days)
+    print day_stats
+    change_stats = processChanges(commits)
+    print len(change_stats)
+    
+#run the program to generate the results 
+if __name__ == '__main__':
+    interesting_commits = process_file('changes_python.log') 
+    populate_lists(interesting_commits)
+    writeCSV(interesting_commits) #generate the CSV file
+    
 
         
       
