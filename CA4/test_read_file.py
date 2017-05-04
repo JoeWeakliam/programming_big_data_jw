@@ -4,12 +4,12 @@ File to test methods from read_file_CA4
 
 import unittest
 
-from read_file_CA4 import Commit, Change
+from read_file_CA4 import Commit, Change, processFile, processChanges, processList
 
 class TestCommits(unittest.TestCase):
 
     def setUp(self):
-        self.commits = process_file('changes_python.log')
+        self.commits = processFile('changes_python.log')
         #print len(self.commits)
     
     #check that 422 unique commit objects have been added to the list 
@@ -40,11 +40,19 @@ class TestCommits(unittest.TestCase):
         self.assertEqual(20, len(self.commits[1].getChanges()) - 1) 
         self.assertEqual(4, len(self.commits[421].getChanges()) - 1)
     
-    #check that the number of commits with > 20 updated files is 23 and details of first long commit are valid
+    #check that the max/min number of commits for sample list is 4 (11) and 1 (2), and the max/min values are 11, 2
+    def test_processList(self):
+        test_list = [11, 6, 2, 5, 11, 11, 6, 25, 25, 11, 78, 3, 3, 5]
+        processList(test_list)
+        self.assertEqual(11, processList(test_list)[0]) #11 has most commits, i.e. max_value
+        self.assertEqual(4, processList(test_list)[1]) #max of 4 commits associated with 11
+        self.assertEqual(2, processList(test_list)[2]) #2 has least commits, i.e. min_value
+        self.assertEqual(1, processList(test_list)[3]) #min of 1 commit associated with 2
+    
+    #check that the number of commits with > 30 updated files is 12 and details of first long commit are valid
     def test_processChanges(self):
         long_commits = processChanges(self.commits)
-        self.assertEqual(23, len(long_commits))
-        #print long_commits[1].getAuthor()
+        self.assertEqual(12, len(long_commits))
         #self.assertEqual('Thomas', long_commits[1].getAuthor())
         #self.assertEqual(12, long_commits[2].getChanges())
         
