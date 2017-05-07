@@ -3,7 +3,6 @@ Program to read in and process the changes log file into a list of 'commit' obje
 """
 #import packages to allow creation of and export to CSV file
 import xlwt
-from tempfile import TemporaryFile
 
 #create a class of commit objects
 class Commit(object):
@@ -74,10 +73,9 @@ def processList(input_list):
             min_commits = input_list.count(unique_value)
             min_value = unique_value
     #want to return multiple values
-    #print max_value, max_commits, min_value, min_commits
     return max_value, max_commits, min_value, min_commits
          
-#process list of changes/authors to record details about commits involving more than 20 files being updated
+#process list of changes/authors to record details about commits involving more than 30 files being updated
 def processChanges(commits):
     index = 0
     num_files_updated = 30 #set min number of changed files that we are interested in 
@@ -85,7 +83,6 @@ def processChanges(commits):
     while index < len(commits):
         if len(commits[index].getChanges()) > num_files_updated:
             change = Change() #create a new change object and set its attributes
-            #print 'new'
             change.setAuthor = commits[index].getAuthor()
             change.setChanges = commits[index].getChanges()
             large_commits.append(change) #add to list of large commits
@@ -111,7 +108,6 @@ def writeCSV(commits):
     #name and save the file
     name = "Commits.csv"
     book.save(name)
-    book.save(TemporaryFile())
     return book
 
 #read in and process the relevant log file detailing commit activity
@@ -166,16 +162,16 @@ def populate_lists(commits):
     #call processList method to process attribute lists and generate interesting stats
     print 'The following interesting statistics were generated from the data:'
     author_stats = processList(authors)
-    print 'Max {} commits made by {}'.format(author_stats[1], author_stats[0])
-    print 'Min {} commits made by {}'.format(author_stats[3], author_stats[2])
+    print 'Most productive coder was {} with {} commits'.format(author_stats[0], author_stats[1])
+    print 'Least productive coder was {} with {} commits'.format(author_stats[2], author_stats[3])
     date_stats = processList(dates)
-    print 'Max {} commits made on {}'.format(date_stats[1], date_stats[0])
-    print 'Min {} commits made on {}'.format(date_stats[3], date_stats[2])
+    print 'There was a maximum of {} commits made on {}'.format(date_stats[1], date_stats[0])
+    print 'There was a minimum of {} commits made on {}'.format(date_stats[3], date_stats[2])
     day_stats = processList(days)
-    print 'Max {} commits made on {}'.format(day_stats[1], day_stats[0])
-    print 'Min {} commits made on {}'.format(day_stats[3], day_stats[2])
+    print '{} is the most productive day with a total of {} commits'.format(day_stats[0], day_stats[1])
+    print '{} is the least productive day with a total of {} commits'.format(day_stats[2], day_stats[3])
     change_stats = processChanges(commits)
-    print 'Number of commits with > 30 updated files: {}'.format(len(change_stats))
+    print 'There were {} commits where more than 30 files were updated'.format(len(change_stats))
     
 #run the program to generate the results 
 if __name__ == '__main__':
